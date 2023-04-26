@@ -204,7 +204,6 @@ def web():
     Indexers = Indexer().get_indexers()
     SearchSource = "douban" if Config().get_config("laboratory").get("use_douban_titles") else "tmdb"
     CustomScriptCfg = SystemConfig().get(SystemConfigKey.CustomScript)
-    CooperationSites = current_user.get_authsites()
     Menus = WebAction().get_user_menus().get("menus") or []
     return render_template('navigation.html',
                            GoPage=GoPage,
@@ -220,7 +219,6 @@ def web():
                            Indexers=Indexers,
                            SearchSource=SearchSource,
                            CustomScriptCfg=CustomScriptCfg,
-                           CooperationSites=CooperationSites,
                            DefaultPath=DefaultPath,
                            Menus=Menus)
 
@@ -377,7 +375,8 @@ def sites():
 @App.route('/sitelist', methods=['POST', 'GET'])
 @login_required
 def sitelist():
-    IndexerSites = Indexer().get_indexers(check=False)
+    # IndexerSites = Indexer().get_indexers(check=False)
+    IndexerSites = Indexer().get_builtin_indexers(check=False)
     return render_template("site/sitelist.html",
                            Sites=IndexerSites,
                            Count=len(IndexerSites))
@@ -924,7 +923,7 @@ def download_setting():
 @login_required
 def indexer():
     # 只有选中的索引器才搜索
-    indexers = Indexer().get_indexers(check=False)
+    indexers = Indexer().get_builtin_indexers(check=False)
     private_count = len([item.id for item in indexers if not item.public])
     public_count = len([item.id for item in indexers if item.public])
     return render_template("setting/indexer.html",
@@ -1649,10 +1648,7 @@ def Img():
     url = request.args.get('url')
     if not url:
         return make_response("参数错误", 400)
-    return send_file(WebUtils.get_image_stream(url),
-                     mimetype='image/jpeg',
-                     download_name='image.jpg',
-                     as_attachment=True)
+    return Response(WebUtils.request_cache(url), mimetype='image/jpeg')
 
 
 # base64模板过滤器

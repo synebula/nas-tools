@@ -35,7 +35,6 @@ class Message(object):
     def init_config(self):
         self.dbhelper = DbHelper()
         self.messagecenter = MessageCenter()
-
         self._domain = Config().get_domain()
         # 停止旧服务
         if self._active_clients:

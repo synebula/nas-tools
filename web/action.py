@@ -9,6 +9,8 @@ import signal
 import sqlite3
 import time
 from urllib.parse import unquote
+import itertools
+
 
 import cn2an
 from flask_login import logout_user, current_user
@@ -211,7 +213,6 @@ class WebAction:
             "get_season_episodes": self.__get_season_episodes,
             "get_user_menus": self.get_user_menus,
             "get_top_menus": self.get_top_menus,
-            "auth_user_level": self.auth_user_level,
             "update_downloader": self.__update_downloader,
             "del_downloader": self.__del_downloader,
             "check_downloader": self.__check_downloader,
@@ -408,6 +409,11 @@ class WebAction:
         if cfg_key == "douban.users":
             vals = cfg_value.split(",")
             cfg['douban']['users'] = vals
+            return cfg
+        # 索引器
+        if cfg_key == "jackett.indexers":
+            vals = cfg_value.split("\n")
+            cfg['jackett']['indexers'] = vals
             return cfg
         # 最大支持三层赋值
         keys = cfg_key.split(".")
@@ -634,15 +640,19 @@ class WebAction:
                 continue
             # 查询站点
             site_info = Sites().get_sites(siteurl=url)
-            if not site_info:
-                return {"code": -1, "msg": "根据链接地址未匹配到站点"}
-            # 下载种子文件，并读取信息
-            file_path, _, _, _, retmsg = Torrent().get_torrent_info(
-                url=url,
-                cookie=site_info.get("cookie"),
-                ua=site_info.get("ua"),
-                proxy=site_info.get("proxy")
-            )
+            # if not site_info:
+            #     return {"code": -1, "msg": "根据链接地址未匹配到站点"}
+            if not url.startswith("magnet:"):
+                # 下载种子文件，并读取信息
+                file_path, _, _, _, retmsg = Torrent().get_torrent_info(
+                    url=url,
+                    cookie=site_info.get("cookie"),
+                    ua=site_info.get("ua"),
+                    proxy=site_info.get("proxy")
+                )
+            else:
+                file_dir = Config().get_temp_path()
+                file_path, retmsg = Torrent().magent2torrent(url, file_dir)
             if not file_path:
                 return {"code": -1, "msg": f"下载种子文件失败： {retmsg}"}
             media_info = Media().get_media_info(title=os.path.basename(file_path))
@@ -4755,32 +4765,6 @@ class WebAction:
             "menus": current_user.get_topmenus()
         }
 
-    @staticmethod
-    def auth_user_level(data=None):
-        """
-        用户认证
-        """
-        if data:
-            site = data.get("site")
-            params = data.get("params")
-        else:
-            UserSiteAuthParams = SystemConfig().get(SystemConfigKey.UserSiteAuthParams)
-            if UserSiteAuthParams:
-                site = UserSiteAuthParams.get("site")
-                params = UserSiteAuthParams.get("params")
-            else:
-                return {"code": 1, "msg": "参数错误"}
-        state, msg = User().check_user(site, params)
-        if state:
-            # 保存认证数据
-            SystemConfig().set(key=SystemConfigKey.UserSiteAuthParams,
-                               value={
-                                   "site": site,
-                                   "params": params
-                               })
-            return {"code": 0, "msg": "认证成功"}
-        return {"code": 1, "msg": f"{msg or '认证失败，请检查合作站点账号是否正常！'}"}
-
     def __update_downloader(self, data):
         """
         更新下载器
@@ -4873,7 +4857,8 @@ class WebAction:
         获取索引器统计数据
         """
         dataset = [["indexer", "avg"]]
-        result = self.dbhelper.get_indexer_statistics() or []
+        client_id = Indexer().get_client().get_client_id()
+        result = self.dbhelper.get_indexer_statistics(client_id) or []
         dataset.extend([[ret[0], round(ret[4], 1)] for ret in result])
         return {
             "code": 0,

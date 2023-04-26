@@ -2742,7 +2742,7 @@ class DbHelper:
             DATE=time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
         ))
 
-    def get_indexer_statistics(self):
+    def get_indexer_statistics(self, client_id):
         """
         查询索引器统计
         """
@@ -2754,7 +2754,8 @@ class DbHelper:
             func.sum(case((INDEXERSTATISTICS.RESULT == 'Y', 1),
                           else_=0)).label("SUCCESS"),
             func.avg(INDEXERSTATISTICS.SECONDS).label("AVG"),
-        ).group_by(INDEXERSTATISTICS.INDEXER).all()
+        ).filter(INDEXERSTATISTICS.TYPE == client_id
+                 ).group_by(INDEXERSTATISTICS.INDEXER).all()
 
     @DbPersist(_db)
     def insert_plugin_history(self, plugin_id, key, value):
