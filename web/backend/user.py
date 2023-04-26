@@ -14,7 +14,7 @@ class User(UserMixin):
 	admin_users = []
 	level = 2
 	admin = 1
-
+  
 	def __init__(self, user=None):
 		self.dbhelper = DbHelper()
 		if user:
@@ -22,11 +22,13 @@ class User(UserMixin):
 			self.username = user.get('name')
 			self.password_hash = user.get('password')
 			self.pris = user.get('pris')
+			self.search = user.get('search')
 		self.admin_users = [{
 			"id": 0,
 			"name": Config().get_config('app').get('login_user'),
 			"password": Config().get_config('app').get('login_password')[6:],
-			"pris": "我的媒体库,资源搜索,探索,站点管理,订阅管理,下载管理,媒体整理,服务,系统设置"
+			"pris": "我的媒体库,资源搜索,探索,站点管理,订阅管理,下载管理,媒体整理,服务,系统设置",
+			"search": 1
 		}]
 
 	def verify_password(self, password):
@@ -56,7 +58,7 @@ class User(UserMixin):
 			if not user:
 				continue
 			if user.ID == user_id:
-				return User({"id": user.ID, "name": user.NAME, "password": user.PASSWORD, "pris": user.PRIS})
+				return User({"id": user.ID, "name": user.NAME, "password": user.PASSWORD, "pris": user.PRIS, "search": 1})
 		return None
 
 	def get_user(self, user_name):
@@ -68,7 +70,7 @@ class User(UserMixin):
 				return User(user)
 		for user in self.dbhelper.get_users():
 			if user.NAME == user_name:
-				return User({"id": user.ID, "name": user.NAME, "password": user.PASSWORD, "pris": user.PRIS})
+				return User({"id": user.ID, "name": user.NAME, "password": user.PASSWORD, "pris": user.PRIS, "search": 1})
 		return None
 
 	def get_services(self):
