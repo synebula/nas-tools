@@ -107,7 +107,7 @@
                       <label class="form-selectgroup-item">
                         <input type="checkbox" name="indexer_sites_private" value="{{ Indexer.id }}"
                                class="form-selectgroup-input"
-                               {% if Config.pt.indexer_sites and Indexer.id in Config.pt.indexer_sites %}checked{% endif %}>
+                               {% if IndexerSites and Indexer.id in IndexerSites %}checked{% endif %}>
                         <span class="form-selectgroup-label">{{ Indexer.name }}</span>
                       </label>
                     {% endif %}
@@ -133,7 +133,7 @@
                 <label class="form-selectgroup-item">
                   <input type="checkbox" name="indexer_sites_public" value="{{ Indexer.id }}"
                           class="form-selectgroup-input"
-                          {% if Config.pt.indexer_sites and Indexer.id in Config.pt.indexer_sites %}checked{% endif %}>
+                          {% if IndexerSites and Indexer.id in IndexerSites %}checked{% endif %}>
                   <span class="form-selectgroup-label">{{ Indexer.name }}</span>
                 </label>
                 {% endif %}
@@ -207,15 +207,26 @@
   function save_config(type, func, test) {
     currType = type;
     let params = {};
+    let conf = {};
+    let db = {};
     if (type !== "builtin") {
       params = input_select_GetVal(`modal-${type}`);
+      params['test'] = test || false;
+      params['pt.search_indexer'] = type;
+      // ajax_post("update_config", params, func);
+      conf['conf'] = params
     } else {
       let sites = select_GetSelectedVAL("^indexer_sites");
-      params['pt.indexer_sites'] = sites
+      let db = {
+        key: "UserIndexerSites",
+        value: sites
+      }
+      params['pt.search_indexer'] = type;
+      conf['conf'] = params
+      conf['db'] = db
+      // ajax_post("set_system_config", params, func);
     }
-    params['test'] = test || false;
-    params['pt.search_indexer'] = type;
-    ajax_post("update_config", params, func);
+    ajax_post("update_all_config", conf, func);
   }
 
   //保存配置、关闭和刷新页面
